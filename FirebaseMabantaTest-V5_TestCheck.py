@@ -53,11 +53,14 @@ class Pzem004T:
         self.master.set_verbose(True)
 
     def PzemSensorDataRead(self):
-        data = self.master.execute(1, cst.READ_INPUT_REGISTERS, 0, 10)
-        voltage = data[0] / 10.0  # [V]
-        current = (data[1] + (data[2] << 16)) / 1000.0  # [A]
-        power = (data[3] + (data[4] << 16)) / 10.0  # [W]
-        return power
+        try:
+            data = self.master.execute(1, cst.READ_INPUT_REGISTERS, 0, 10)
+            voltage = data[0] / 10.0  # [V]
+            current = (data[1] + (data[2] << 16)) / 1000.0  # [A]
+            power = (data[3] + (data[4] << 16)) / 10.0  # [W]
+            return power
+        except ModbusInvalidResponseError:
+            pass
         
 
 class ElectricityController:
