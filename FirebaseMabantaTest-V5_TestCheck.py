@@ -53,13 +53,14 @@ class Pzem004T:
         self.master.set_verbose(True)
 
     def PzemSensorDataRead(self):
-        data = self.master.execute(1, cst.READ_INPUT_REGISTERS, 0, 10)
-        voltage = data[0] / 10.0  # [V]
-        current = (data[1] + (data[2] << 16)) / 1000.0  # [A]
-        power = (data[3] + (data[4] << 16)) / 10.0  # [W]
-        power_in_kWh = (power / 1000) / 3600  # Convert power to kilowatt-hours
-        power_consumption = round(power_in_kWh, 7)
-        return power_consumption
+        try:
+            data = self.master.execute(1, cst.READ_INPUT_REGISTERS, 0, 10)
+            voltage = data[0] / 10.0  # [V]
+            current = (data[1] + (data[2] << 16)) / 1000.0  # [A]
+            power = (data[3] + (data[4] << 16)) / 10.0  # [W]
+            return power
+        except ModbusInvalidResponseError:
+            pass
         
 
 class ElectricityController:
@@ -121,23 +122,25 @@ class ElectricityController:
                     self.lastLocalData = localData
                     time.sleep(1.50)
 
-                    # Read power from the PZEM004T sensor
-                    power = self.pzem_sensor.PzemSensorDataRead()
-                    current_datetime = datetime.now().strftime('%m-%d-%Y %H:%M:%S')
-                    if power > 0:  # Only update PowerConsumption if power is greater than 0
-                        localData["Rooms"]["Room-1"]["PowerConsumption"][current_datetime] = power
-                        # Deduct from CurrentCredit
-                        electricity_price = localData["Rooms"]["Room-1"]["ElectricityPrice"]
-                        current_credit = localData["Rooms"]["Room-1"]["CurrentCredit"]
-                        deduction = power * electricity_price
-                        updated_credit = current_credit - deduction
+                # Update PowerConsumption with the current time and power value
+                power = self.pzem_sensor.PzemSensorDataRead()
+                power_in_kWh = (power / 1000) / 3600  # Convert power to kilowatt-hours
+                current_datetime = datetime.now().strftime('%m-%d-%Y %H:%M:%S')
+                power_consumption = round(power_in_kWh, 7)
+                if power > 0:  # Only update PowerConsumption if power is greater than 0
+                    localData["Rooms"]["Room-1"]["PowerConsumption"][current_datetime] = power_consumption
+                    # Deduct from CurrentCredit
+                    electricity_price = localData["Rooms"]["Room-1"]["ElectricityPrice"]
+                    current_credit = localData["Rooms"]["Room-1"]["CurrentCredit"]
+                    deduction = power_consumption * electricity_price
+                    updated_credit = current_credit - deduction
 
-                        # Make sure the updated_credit is never negative
-                        updated_credit = max(updated_credit, 0)
+                    # Make sure the updated_credit is never negative
+                    updated_credit = max(updated_credit, 0)
 
-                        localData["Rooms"]["Room-1"]["CurrentCredit"] = updated_credit
+                    localData["Rooms"]["Room-1"]["CurrentCredit"] = updated_credit
 
-                    self.localManager.updateLocal(localData)
+                self.localManager.updateLocal(localData)
 
             except Exception as e:
                 print('Error: ', e)
