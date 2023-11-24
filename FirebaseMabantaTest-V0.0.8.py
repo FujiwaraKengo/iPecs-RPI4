@@ -145,7 +145,12 @@ class ElectricityController:
             if FirebaseData is not None:
                 if FirebaseData != self.lastFirebaseData:
                     # Firebase data for Room-1 was updated, so update local JSON
-                    self.lastLocalData["Rooms"]["Room-1"] = FirebaseData
+                    required_fields = {
+                        "CreditCriticalLevel": self.lastFirebaseData["CreditCriticalLevel"],
+                        "CurrentCredit": self.lastFirebaseData["CurrentCredit"],
+                        "ElectricityPrice": self.lastFirebaseData["ElectricityPrice"],
+                    }
+                    self.lastLocalData["Rooms"]["Room-1"].update(required_fields)
                     self.localManager.updateLocal(self.lastLocalData)
                     print('Change detected in Room-1 in the Firebase database')
                     self.lastFirebaseData = FirebaseData
