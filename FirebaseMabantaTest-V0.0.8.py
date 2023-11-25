@@ -9,6 +9,7 @@ from modbus_tk import modbus_rtu
 from modbus_tk.exceptions import ModbusInvalidResponseError
 from gpiozero import LED
 from datetime import datetime
+import ntplib
 
 switch = LED(17)
 
@@ -88,6 +89,14 @@ class Pzem004T:
             return None
 
 class ElectricityController:
+    def set_time():
+        ntp_client = ntplib.NTPClient()
+        response = ntp_client.request('pool.ntp.org')
+        current_time = datetime.fromtimestamp(response.tx_time)
+        formatted_time = current_time.strftime('%Y-%m-%d %H:%M:%S')
+        command = f'sudo date -s "{formatted_time}"'
+        os.system(command)
+
     def __init__(self):
         try:
             self.Firebase = FirebaseManager('econtrollectricity-firebase-adminsdk-r45sa-d9f7151c8b.json',
@@ -196,6 +205,7 @@ class ElectricityController:
             time.sleep(1)
                 
     def run(self):
+        self.set_time()
         pzem_thread = threading.Thread(target=self.PzemToLocalData)
         pzem_thread.daemon = True
         pzem_thread.start()
