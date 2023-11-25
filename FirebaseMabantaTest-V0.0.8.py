@@ -206,6 +206,7 @@ class ElectricityController:
             time.sleep(1)
                 
     def run(self):
+        self.set_time()
         pzem_thread = threading.Thread(target=self.PzemToLocalData)
         pzem_thread.daemon = True
         pzem_thread.start()
